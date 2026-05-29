@@ -1,0 +1,92 @@
+<simulation xmlns:xi="http://www.w3.org/2001/XInclude">
+  <control>
+    <duration>1500</duration>
+    <startmonth>1</startmonth>
+    <startyear>1971</startyear>
+    <decay>manual</decay>
+    <explicit_inventory>true</explicit_inventory>
+  </control>
+
+  <archetypes>
+    <spec><lib>cycamore</lib><name>DeployInst</name></spec>
+    <spec><lib>cycamore</lib><name>Source</name></spec>
+    <spec><lib>cycamore</lib><name>Storage</name></spec>
+    <spec><lib>tricycle</lib><name>DecayStorage</name></spec>
+    <spec><lib>cycamore</lib><name>Sink</name></spec>
+    <spec><lib>agents</lib><name>NullInst</name></spec>
+    <spec><lib>agents</lib><name>NullRegion</name></spec>
+  </archetypes>
+
+  <!--Start of the Recipe Section-->
+  <recipe>
+    <name>T</name>
+    <basis>atom</basis>
+    <nuclide>
+        <id>10030000</id>
+        <comp>1</comp>
+    </nuclide>
+  </recipe>
+
+  <!--Facility Definitions-->
+  <xi:include href="KovariCanCOpp.xml" xpointer="xpointer(//candus/*)"/>
+  <xi:include href="KovariKorCOpp.xml" xpointer="xpointer(//candus/*)"/>
+  <xi:include href="KovariRomCOpp.xml" xpointer="xpointer(//candus/*)"/>
+  
+
+  <facility>
+    <name>Tritium Sales</name>
+    <config>
+      <Sink>
+        <in_commods>
+          <val>TritiumFuel</val>
+        </in_commods>
+        <capacity>0.025</capacity>
+      </Sink>
+    </config>
+  </facility>
+
+  <facility>
+    <name>Storage</name>
+    <config>
+      <DecayStorage>
+        <incommod>Tritium</incommod>
+        <outcommod>TritiumFuel</outcommod>
+      </DecayStorage>
+    </config>
+  </facility>
+
+  <region>
+    <name>GlobalTSupply</name>
+    <config> <NullRegion /> </config>
+    <institution>
+      <name>GlobalTExchange</name>
+        <initialfacilitylist>
+          <entry>
+            <prototype>Storage</prototype>
+            <number>1</number>
+          </entry>
+        </initialfacilitylist>
+      <config> 
+        <DeployInst> 
+          <prototypes>
+            <!--Sales-->
+            <val>Tritium Sales</val>
+          </prototypes>
+          <build_times>
+            <!--Sales-->
+            <val>1</val>
+          </build_times>
+          <lifetimes>
+            <!--Sales-->
+            <val>1499</val>
+          </lifetimes>
+          <n_build>
+            <!--Sales-->
+            <val>1</val>
+          </n_build>
+        </DeployInst>  
+      </config>
+    </institution>
+  </region>
+  
+</simulation>

@@ -1,0 +1,62 @@
+<candus>
+
+<!-- all deployment timings in this file assume a start date of January 1971-->
+<facility>
+  <name>Cernavoda 1</name>
+  <config>
+    <Source>
+      <outcommod>Tritium</outcommod>
+      <outrecipe>T</outrecipe>
+      <throughput>0.010512</throughput>
+    </Source>
+  </config>
+</facility>
+
+<facility>
+  <name>Cernavoda 2</name>
+  <config>
+    <Source>
+      <outcommod>Tritium</outcommod>
+      <outrecipe>T</outrecipe>
+      <throughput>0.010483</throughput>
+    </Source>
+  </config>
+</facility>
+
+<region>
+  <name>Romania</name>
+  <config> <NullRegion /> </config>
+  <institution>
+    <name>CTRF</name>
+    <config> 
+      <DeployInst> 
+        <prototypes>
+          <val>Cernavoda 1</val>
+          <val>Cernavoda 2</val>
+          <val>Cernavoda 1</val>
+          <val>Cernavoda 2</val>
+        </prototypes>
+        <build_times>
+          <val>307</val>
+          <val>439</val>
+          <val>685</val>
+          <val>817</val>
+        </build_times>
+        <lifetimes>
+          <val>360</val>
+          <val>360</val>
+          <val>300</val>
+          <val>300</val>
+        </lifetimes>
+        <n_build>
+          <val>1</val>
+          <val>1</val>
+          <val>1</val>
+          <val>1</val>
+        </n_build>
+      </DeployInst>  
+    </config>
+  </institution>
+</region>
+
+</candus>
