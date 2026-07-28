@@ -6,6 +6,7 @@
 #include "context.h"
 #include "facility_tests.h"
 #include "fusion_power_plant.h"
+#include "strt_up_policy.h"
 #include "pyhooks.h"
 
 using cyclus::CompMap;
@@ -159,15 +160,15 @@ TEST_F(FusionPowerPlantTest, WrongFuelStartup) {
 
   std::string config =
       common_config +
-      "  <TBR>1.00</TBR>"
-      " <fuel_incommod>Enriched_Lithium</fuel_incommod>"
-      " <blanket_turnover_fraction>0.03</blanket_turnover_fraction>";
+      "<TBR>1.00</TBR>"
+      "<fuel_incommod>Enriched_Lithium</fuel_incommod>"
+      "<blanket_turnover_fraction>0.03</blanket_turnover_fraction>";
 
   int simdur = 3;
   cyclus::MockSim sim(cyclus::AgentSpec(":tricycle:FusionPowerPlant"), config,
                       simdur);
 
-  sim.AddRecipe("tritium", tritium());
+  sim.AddRecipe("enriched_lithium", tritium());
   sim.AddRecipe("enriched_lithium", enriched_lithium());
   sim.AddSource("Enriched_Lithium").recipe("enriched_lithium").Finalize();
 
@@ -209,8 +210,8 @@ TEST_F(FusionPowerPlantTest, DecayInventoryExtractHelium) {
   double lambda = 2.57208504984001213e-09;
   double t = 2629846;
 
-  double expected_decay = init_quant -
-                          init_quant * std::pow(2, -lambda * t);
+  double expected_decay = (init_quant) -
+                          (init_quant) * std::pow(2, -lambda * t);
 
   EXPECT_NEAR(expected_decay, he3, 1e-6);
 }
@@ -340,6 +341,52 @@ TEST_F(FusionPowerPlantTest, EnterNotifyScheduleFill) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill2) {
+  // Test catch for invalid fill behavior keyword in EnterNotify.
+
+  std::string config = common_config +
+                       " <TBR>1.00</TBR> "
+                       " <fuel_incommod>Tritium</fuel_incommod>"
+                       " <buy_quantity>0.1</buy_quantity>"
+                       " <buy_frequency>1</buy_frequency>"
+                       " <refuel_mode>kjnsfdhn</refuel_mode>";
+
+  int simdur = 2;
+  cyclus::MockSim sim = InitializeSim(config, simdur);
+
+  EXPECT_THROW(int id = sim.Run(), cyclus::KeyError);
+}
+// Unfinished
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+TEST_F(FusionPowerPlantTest, EnterNotifySellPolicy) {
+  // Test sell policy behavior of enter notify.
+
+  std::string config = common_config +
+                       " <TBR>1.30</TBR> "
+                       " <fuel_incommod>Tritium</fuel_incommod>"
+                        "<fuel_outcommod>TritiumFuel</fuel_outcommod>";
+
+  int simdur = 10;
+  cyclus::MockSim sim(cyclus::AgentSpec(":tricycle:FusionPowerPlant"), config,
+                      simdur);
+
+  sim.AddRecipe("tritium", tritium());
+  sim.AddRecipe("enriched_lithium", enriched_lithium());
+
+  sim.AddSource("Tritium").capacity(100).recipe("tritium").Finalize();
+  sim.AddSink("TritiumFuel").Finalize();
+  sim.AddSource("Enriched_Lithium").recipe("enriched_lithium").Finalize();
+
+  int id = sim.Run();
+
+  std::vector<Cond> conds;
+  conds.push_back(Cond("TritiumExcess", "==", std::string("0")));
+  QueryResult qr = sim.db().Query("FPPInventories", &conds);
+  double qr_rows = qr.rows.size();
+
+  EXPECT_EQ(simdur, qr_rows);
+}
+
 TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill) {
   // Test catch for invalid fill behavior keyword in EnterNotify.
 
@@ -355,34 +402,28 @@ TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill) {
 
   EXPECT_THROW(int id = sim.Run(), cyclus::KeyError);
 }
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TEST_F(FusionPowerPlantTest, EnterNotifySellPolicy) {
-  // Test sell policy behavior of enter notify.
 
-  std::string config = common_config +
-                       " <TBR>1.30</TBR> "
-                       " <fuel_incommod>Tritium</fuel_incommod>"
-                        "<fuel_outcommod>TritiumFromFPP</fuel_outcommod>";
+TEST_F(FusionPowerPlantTest, StartupPolicyRegistration) {
+  facility->reserve_inventory = 6.0;
+  facility->sequestered_equilibrium = 2.121;
+  facility->tritium_startup_fraction = 0.9;
+  facility->blanket_size = 1000.0;
+  facility->blanket_turnover_fraction = 0.05;
+  facility->fusion_power = 300.0;
+  facility->blanket_inrecipe = "enriched_lithium";
 
-  int simdur = 10;
-  cyclus::MockSim sim(cyclus::AgentSpec(":tricycle:FusionPowerPlant"), config,
-                      simdur);
+  // EnterNotify() also creates `blanket` from a recipe looked up via
+  // context()->GetRecipe(blanket_inrecipe) and sets up buy/sell
+  // policies -- register the recipe first so that call doesn't throw.
+  facility->context()->AddRecipe("enriched_lithium", enriched_lithium());
 
-  sim.AddRecipe("tritium", tritium());
-  sim.AddRecipe("enriched_lithium", enriched_lithium());
+  facility->fuel_incommod = "Tritium";
+  facility->blanket_incommod = "Enriched_Lithium";
+  facility->blanket_outcommod = "Depleted_Lithium";
+  facility->fuel_outcommod = "TritiumFuel";
+  facility->he3_outcommod = "Helium_3";
+  facility->refuel_mode = "fill";
 
-  sim.AddSource("Tritium").capacity(100).recipe("tritium").Finalize();
-  sim.AddSink("TritiumFromFPP").Finalize();
-  sim.AddSource("Enriched_Lithium").recipe("enriched_lithium").Finalize();
-
-  int id = sim.Run();
-
-  std::vector<Cond> conds;
-  conds.push_back(Cond("TritiumExcess", "==", std::string("0")));
-  QueryResult qr = sim.db().Query("FPPInventories", &conds);
-  double qr_rows = qr.rows.size();
-
-  EXPECT_EQ(simdur, qr_rows);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

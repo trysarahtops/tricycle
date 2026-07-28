@@ -4,8 +4,10 @@
 #include <string>
 
 #include "cyclus.h"
+#include "strt_up_policy.h"
 #include "boost/shared_ptr.hpp"
 #include "pyne.h"
+/// #include "strt_up_policy_snippet.cycpp.h"
 
 using cyclus::Material;
 
@@ -36,6 +38,7 @@ namespace tricycle {
 /// This section needs to be filled out once there is some behavior to describe.
 ///
 class FusionPowerPlant : public cyclus::Facility  {
+  friend class FusionPowerPlantTest;
  public:
   /// Constructor for FusionPowerPlant Class
   /// @param ctx the cyclus context for access to simulation-wide parameters
@@ -124,7 +127,7 @@ class FusionPowerPlant : public cyclus::Facility  {
   std::string fuel_incommod;
 
   #pragma cyclus var { "default":"",\
-    "doc": "Fuel commodity leaving power plant", \
+    "doc": "Fresh fuel commodity", \
     "tooltip": "Name of fuel commodity offered", \
     "uilabel": "Fuel output commodity" \
   }
@@ -257,6 +260,8 @@ class FusionPowerPlant : public cyclus::Facility  {
   cyclus::toolkit::ResBuf<cyclus::Material> helium_excess;
   cyclus::toolkit::ResBuf<cyclus::Material> blanket_feed;
   cyclus::toolkit::ResBuf<cyclus::Material> blanket_waste;
+  cyclus::toolkit::ResBuf<cyclus::Material> feed_inv;
+  cyclus::toolkit::ResBuf<cyclus::Material> topup_inv;
 
   cyclus::toolkit::MatlBuyPolicy fuel_startup_policy;
   cyclus::toolkit::MatlBuyPolicy fuel_refill_policy;
@@ -268,6 +273,7 @@ class FusionPowerPlant : public cyclus::Facility  {
 
   cyclus::toolkit::TotalInvTracker fuel_tracker;
   cyclus::toolkit::TotalInvTracker blanket_tracker;
+  tricycle::StartupPolicy strt_up_policy;
 
   //This is to correctly instantiate the TotalInvTracker(s)
   double fuel_limit = 1000.0;

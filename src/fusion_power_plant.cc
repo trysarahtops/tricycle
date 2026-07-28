@@ -1,5 +1,7 @@
 #include "fusion_power_plant.h"
+#include "strt_up_policy.h"
 
+using tricycle::StartupPolicy;
 using cyclus::CompMap;
 using cyclus::Composition;
 using cyclus::DoubleDistribution;
@@ -40,6 +42,11 @@ void FusionPowerPlant::EnterNotify() {
   fuel_usage_mass = (burn_rate * (fusion_power / MW_to_GW) /
                      (kDefaultTimeStepDur * 12) * context()->dt());
   blanket_turnover = blanket_size * blanket_turnover_fraction;
+
+  strt_up_policy.Register(
+      "tritium_storage", &tritium_storage,
+      (reserve_inventory + sequestered_equilibrium) * tritium_startup_fraction);
+  strt_up_policy.Register("blanket_feed", &blanket_feed, blanket_turnover);
 
   // Create the blanket material for use in the core, no idea if this works...
   blanket = Material::Create(this, 0.0, context()->GetRecipe(blanket_inrecipe));
@@ -175,15 +182,14 @@ bool FusionPowerPlant::TritiumStorageClean() {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bool FusionPowerPlant::ReadyToOperate() {
   // Determine tritium inventory required to operate
-  double required_storage_inventory = SequesteredTritiumGap();
-  if (sequestered_tritium->quantity() < cyclus::eps_rsrc()) {
-    required_storage_inventory += reserve_inventory;
-    required_storage_inventory *= tritium_startup_fraction;
-  } else {
-    required_storage_inventory += fuel_usage_mass;
+ if (sequestered_tritium->quantity() < cyclus::eps_rsrc()) {
+    // Initial startup: gated entirely by strt_up_policy.
+    return strt_up_policy.full();
   }
 
-  // check  tritium storage quantity requirement
+  // Steady-state operation: dynamic per-tick requirement, not a fixed
+  // "startup" threshold, so this stays as bespoke logic.
+  double required_storage_inventory = SequesteredTritiumGap() + fuel_usage_mass;
   if (tritium_storage.quantity() < required_storage_inventory ||
       !TritiumStorageClean()) {
     return false;
@@ -193,6 +199,7 @@ bool FusionPowerPlant::ReadyToOperate() {
   }
   return true;
 }
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 void FusionPowerPlant::LoadCore() {
