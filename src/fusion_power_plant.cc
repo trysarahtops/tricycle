@@ -194,7 +194,7 @@ bool FusionPowerPlant::ReadyToOperate() {
       !TritiumStorageClean()) {
     return false;
   }
-  if (BlanketCycleTime() && blanket_feed.quantity() < blanket_turnover) {
+  if (BlanketCycleTime() && strt_up_policy.full("blanket_feed")) {
     return false;
   }
   return true;
