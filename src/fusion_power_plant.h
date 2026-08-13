@@ -251,6 +251,7 @@ class FusionPowerPlant : public cyclus::Facility  {
 
 
  private:
+  FRIEND_TEST(FusionPowerPlantTest, StartupPolicyRegistration);
   //Resource Buffers and Trackers:
   cyclus::toolkit::ResBuf<cyclus::Material> tritium_storage;
   cyclus::toolkit::ResBuf<cyclus::Material> tritium_excess;
