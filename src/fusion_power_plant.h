@@ -262,8 +262,6 @@ class FusionPowerPlant : public cyclus::Facility  {
   cyclus::toolkit::ResBuf<cyclus::Material> helium_excess;
   cyclus::toolkit::ResBuf<cyclus::Material> blanket_feed;
   cyclus::toolkit::ResBuf<cyclus::Material> blanket_waste;
-  cyclus::toolkit::ResBuf<cyclus::Material> feed_inv;
-  cyclus::toolkit::ResBuf<cyclus::Material> topup_inv;
 
   cyclus::toolkit::MatlBuyPolicy fuel_startup_policy;
   cyclus::toolkit::MatlBuyPolicy fuel_refill_policy;
