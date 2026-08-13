@@ -89,7 +89,6 @@ class StartupPolicy {
   void UpdateThreshold(const std::string& name, double new_threshold);
 
  private:
-  FRIEND_TEST(FusionPowerPlantTest, StartupPolicyRegistration);
    struct Tracker {
     Tracker(ResBuf<Material>* buf_, double threshold_)
         : buf(buf_), threshold(threshold_) {}
