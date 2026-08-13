@@ -250,7 +250,6 @@ class FusionPowerPlant : public cyclus::Facility  {
                          double sequestered_tritium, double blanket_feed, 
                          double blanket_excess, double helium_excess);
 
-  std::unique_ptr<StartupPolicy> strt_up_policy;
  private:
   FRIEND_TEST(FusionPowerPlantTest, StartupPolicyRegistration);
   //Resource Buffers and Trackers:
@@ -272,6 +271,7 @@ class FusionPowerPlant : public cyclus::Facility  {
 
   cyclus::toolkit::TotalInvTracker fuel_tracker;
   cyclus::toolkit::TotalInvTracker blanket_tracker;
+  std::unique_ptr<StartupPolicy> strt_up_policy;
 
   //This is to correctly instantiate the TotalInvTracker(s)
   double fuel_limit = 1000.0;
