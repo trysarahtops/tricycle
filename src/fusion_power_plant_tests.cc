@@ -51,7 +51,7 @@ cyclus::MockSim InitializeSim(std::string config, int simdur) {
   cyclus::MockSim sim(cyclus::AgentSpec(":tricycle:FusionPowerPlant"), config,
                       simdur);
 
-  sim.AddRecipe("enriched_lithium", tritium());
+  sim.AddRecipe("tritium", tritium());
   sim.AddRecipe("enriched_lithium", enriched_lithium());
   sim.AddSource("Enriched_Lithium").recipe("enriched_lithium").Finalize();
   sim.AddSource("Tritium").recipe("tritium").Finalize();
