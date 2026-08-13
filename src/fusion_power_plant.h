@@ -250,7 +250,7 @@ class FusionPowerPlant : public cyclus::Facility  {
                          double sequestered_tritium, double blanket_feed, 
                          double blanket_excess, double helium_excess);
 
-
+  std::unique_ptr<StartupPolicy> strt_up_policy;
  private:
   FRIEND_TEST(FusionPowerPlantTest, StartupPolicyRegistration);
   //Resource Buffers and Trackers:
