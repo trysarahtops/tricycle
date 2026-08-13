@@ -4,7 +4,6 @@
 #include <string>
 #include "cyclus.h"
 #include "boost/shared_ptr.hpp"
-#include "gtest/gtest_prod.h"
 #include "pyne.h"
 using cyclus::Material;
 
@@ -250,8 +249,13 @@ class FusionPowerPlant : public cyclus::Facility  {
                          double sequestered_tritium, double blanket_feed, 
                          double blanket_excess, double helium_excess);
 
+  int StartupPolicyTrackerCount() const;
+  bool StartupPolicyFull() const;
+  bool StartupPolicyFull(const std::string& name) const;
+  void PushTritiumStorage(cyclus::Material::Ptr mat);
+  void PushBlanketFeed(cyclus::Material::Ptr mat);
+
  private:
-  FRIEND_TEST(FusionPowerPlantTest, StartupPolicyRegistration);
   //Resource Buffers and Trackers:
   cyclus::toolkit::ResBuf<cyclus::Material> tritium_storage;
   cyclus::toolkit::ResBuf<cyclus::Material> tritium_excess;

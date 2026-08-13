@@ -31,6 +31,12 @@ FusionPowerPlant::FusionPowerPlant(cyclus::Context* ctx)
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Must be defined here, not inline in the header, now that strt_up_policy
+// is a std::unique_ptr<StartupPolicy> to a forward-declared type --
+// StartupPolicy's complete definition (from strt_up_policy.h, included
+// above) is only visible in this .cc file.
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 std::string FusionPowerPlant::str() {
   return Facility::str();
 }
@@ -182,12 +188,21 @@ bool FusionPowerPlant::TritiumStorageClean() {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bool FusionPowerPlant::ReadyToOperate() {
   // Determine tritium inventory required to operate
- if (sequestered_tritium->quantity() < cyclus::eps_rsrc()) {
-    // Initial startup: gated entirely by strt_up_policy.
-    return strt_up_policy->full();
+  if (sequestered_tritium->quantity() < cyclus::eps_rsrc()) {
+    // Initial startup: gated by strt_up_policy on quantity, plus a purity
+    // check on tritium_storage -- strt_up_policy->full() only compares
+    // mass against threshold, so a buffer filled with the wrong commodity
+    // (enough mass, wrong composition) would otherwise satisfy it. Order
+    // matters here: full() is checked first so TritiumStorageClean() (via
+    // ResBuf::Peek()) is only called once we know tritium_storage is
+    // actually nonempty.
+    return strt_up_policy->full() && TritiumStorageClean();
   }
 
-  // Steady-state operation: dynamic per-tick requirement.
+  // Steady-state operation: dynamic per-tick requirement, not a fixed
+  // "startup" threshold, so this stays as bespoke logic rather than
+  // going through strt_up_policy (whose thresholds are fixed once, at
+  // EnterNotify() time, and can't track this tick-by-tick requirement).
   double required_storage_inventory = SequesteredTritiumGap() + fuel_usage_mass;
   if (tritium_storage.quantity() < required_storage_inventory ||
       !TritiumStorageClean()) {
@@ -292,6 +307,27 @@ void FusionPowerPlant::CycleBlanket() {
 bool FusionPowerPlant::BlanketCycleTime() {
   return ((context()->time() > 0) &&
           (context()->time() % blanket_turnover_frequency == 0));
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+int FusionPowerPlant::StartupPolicyTrackerCount() const {
+  return strt_up_policy->n_trackers();
+}
+ 
+bool FusionPowerPlant::StartupPolicyFull() const {
+  return strt_up_policy->full();
+}
+ 
+bool FusionPowerPlant::StartupPolicyFull(const std::string& name) const {
+  return strt_up_policy->full(name);
+}
+ 
+void FusionPowerPlant::PushTritiumStorage(cyclus::Material::Ptr mat) {
+  tritium_storage.Push(mat);
+}
+ 
+void FusionPowerPlant::PushBlanketFeed(cyclus::Material::Ptr mat) {
+  blanket_feed.Push(mat);
 }
 
 // WARNING! Do not change the following this function!!! This enables your

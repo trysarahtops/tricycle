@@ -390,6 +390,13 @@ TEST_F(FusionPowerPlantTest, EnterNotifySellPolicy) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TEST_F(FusionPowerPlantTest, StartupPolicyRegistration) {
+  // Direct unit test: calls EnterNotify() on `facility` outside a full
+  // MockSim (same pattern as Tock/Print above), then inspects
+  // strt_up_policy directly via the FusionPowerPlantTest friend grant.
+  // Confirms Register() wires up exactly the two expected trackers with
+  // the thresholds EnterNotify() computes, and that full() only flips
+  // true once BOTH tracked buffers are independently at threshold.
+ 
   facility->reserve_inventory = 6.0;
   facility->sequestered_equilibrium = 2.121;
   facility->tritium_startup_fraction = 0.9;
@@ -397,66 +404,73 @@ TEST_F(FusionPowerPlantTest, StartupPolicyRegistration) {
   facility->blanket_turnover_fraction = 0.05;
   facility->fusion_power = 300.0;
   facility->blanket_inrecipe = "enriched_lithium";
-
+ 
   // EnterNotify() also creates `blanket` from a recipe looked up via
   // context()->GetRecipe(blanket_inrecipe) and sets up buy/sell
   // policies -- register the recipe first so that call doesn't throw.
   facility->context()->AddRecipe("enriched_lithium", enriched_lithium());
-
+ 
   facility->fuel_incommod = "Tritium";
   facility->blanket_incommod = "Enriched_Lithium";
   facility->blanket_outcommod = "Depleted_Lithium";
   facility->fuel_outcommod = "TritiumFuel";
   facility->he3_outcommod = "Helium_3";
   facility->refuel_mode = "fill";
-
+ 
   EXPECT_NO_THROW(facility->EnterNotify());
-
-  // strt_up_policy is a std::unique_ptr<StartupPolicy> -- dereference
-  // with -> to call through it, same as any other pointer.
-  EXPECT_EQ(2, facility->strt_up_policy->n_trackers());
-
+ 
+  // strt_up_policy, tritium_storage, and blanket_feed are private;
+  // these public wrapper methods expose exactly what the test needs.
+  EXPECT_EQ(2, facility->StartupPolicyTrackerCount());
+ 
   // Nothing pushed into either tracked buffer yet -- not full.
-  EXPECT_FALSE(facility->strt_up_policy->full());
-
+  EXPECT_FALSE(facility->StartupPolicyFull());
+ 
   // Fill tritium_storage to exactly its threshold; blanket_feed is still
   // empty, so the policy as a whole should still report not-full.
   double tritium_threshold =
       (facility->reserve_inventory + facility->sequestered_equilibrium) *
       facility->tritium_startup_fraction;
   Material::Ptr trit = Material::CreateUntracked(tritium_threshold, tritium());
-  facility->tritium_storage.Push(trit);
-
-  EXPECT_TRUE(facility->strt_up_policy->full("tritium_storage"));
-  EXPECT_FALSE(facility->strt_up_policy->full("blanket_feed"));
-  EXPECT_FALSE(facility->strt_up_policy->full());
-
+  facility->PushTritiumStorage(trit);
+ 
+  EXPECT_TRUE(facility->StartupPolicyFull("tritium_storage"));
+  EXPECT_FALSE(facility->StartupPolicyFull("blanket_feed"));
+  EXPECT_FALSE(facility->StartupPolicyFull());
+ 
   // Now fill blanket_feed to its threshold too -- policy should flip to
   // full.
   double blanket_threshold =
       facility->blanket_size * facility->blanket_turnover_fraction;
   Material::Ptr blanket_mat =
       Material::CreateUntracked(blanket_threshold, enriched_lithium());
-  facility->blanket_feed.Push(blanket_mat);
-
-  EXPECT_TRUE(facility->strt_up_policy->full());
+  facility->PushBlanketFeed(blanket_mat);
+ 
+  EXPECT_TRUE(facility->StartupPolicyFull());
 }
-
+ 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TEST_F(FusionPowerPlantTest, StartupBlockedByUndersizedBlanket) {
+  // Complements WrongFuelStartup: that test exercises the tritium/purity
+  // half of the startup gate (right quantity, wrong composition). This
+  // one exercises the blanket half -- correct tritium fuel, but a
+  // blanket source too small to ever reach the blanket_feed threshold
+  // registered with strt_up_policy, so the plant should never sequester
+  // tritium regardless of how much valid tritium arrives.
+ 
   std::string config = common_config +
                        " <TBR>1.00</TBR> "
                        " <fuel_incommod>Tritium</fuel_incommod>"
                        " <blanket_turnover_fraction>0.05</blanket_turnover_fraction>";
-
+ 
   int simdur = 3;
   cyclus::MockSim sim(cyclus::AgentSpec(":tricycle:FusionPowerPlant"), config,
                       simdur);
-
+ 
   sim.AddRecipe("tritium", tritium());
   sim.AddRecipe("enriched_lithium", enriched_lithium());
   sim.AddSource("Tritium").recipe("tritium").Finalize();
-
+ 
   // blanket_turnover threshold here is blanket_size * blanket_turnover_
   // fraction = 1000 * 0.05 = 50. Capping the source well below that means
   // blanket_feed can never satisfy its strt_up_policy tracker.
@@ -464,14 +478,15 @@ TEST_F(FusionPowerPlantTest, StartupBlockedByUndersizedBlanket) {
       .capacity(1.0)
       .recipe("enriched_lithium")
       .Finalize();
-
+ 
   int id = sim.Run();
-
+ 
   QueryResult qr = TimeInventoryQuery(sim, std::to_string(simdur - 1));
   double seq_trit = qr.GetVal<double>("TritiumSequestered");
-
+ 
   EXPECT_EQ(0, seq_trit);
 }
+ 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Do Not Touch! Below section required for connection with Cyclus
 cyclus::Agent* FusionPowerPlantConstructor(cyclus::Context* ctx) {
