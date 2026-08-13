@@ -293,8 +293,8 @@ class FusionPowerPlant : public cyclus::Facility  {
   const cyclus::Composition::Ptr tritium_comp = cyclus::Composition::CreateFromAtom(T);
 
   //Materials:
-  cyclus::Material::Ptr sequestered_tritium = cyclus::Material::CreateUntracked(0.0, tritium_comp);
-  cyclus::Material::Ptr incore_fuel = cyclus::Material::CreateUntracked(0.0, tritium_comp);
+  cyclus::Material::Ptr sequestered_tritium = cyclus::Material::Create(this,0.0, tritium_comp);
+  cyclus::Material::Ptr incore_fuel = cyclus::Material::Create(this, 0.0, tritium_comp);
 
   // Constants
   static const double burn_rate; // kg/GW-y
