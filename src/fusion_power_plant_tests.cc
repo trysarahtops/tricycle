@@ -16,6 +16,7 @@ using cyclus::QueryResult;
 using cyclus::toolkit::MatQuery;
 using tricycle::FusionPowerPlant;
 
+
 Composition::Ptr tritium() {
   cyclus::CompMap m;
   m[10030000] = 1.0;
@@ -356,7 +357,7 @@ TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill) {
 
   EXPECT_THROW(int id = sim.Run(), cyclus::KeyError);
 }
-// Unfinished
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TEST_F(FusionPowerPlantTest, EnterNotifySellPolicy) {
   // Test sell policy behavior of enter notify.
@@ -387,6 +388,7 @@ TEST_F(FusionPowerPlantTest, EnterNotifySellPolicy) {
   EXPECT_EQ(simdur, qr_rows);
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TEST_F(FusionPowerPlantTest, StartupPolicyRegistration) {
   facility->reserve_inventory = 6.0;
   facility->sequestered_equilibrium = 2.121;
@@ -408,8 +410,68 @@ TEST_F(FusionPowerPlantTest, StartupPolicyRegistration) {
   facility->he3_outcommod = "Helium_3";
   facility->refuel_mode = "fill";
 
+  EXPECT_NO_THROW(facility->EnterNotify());
+
+  // strt_up_policy is a std::unique_ptr<StartupPolicy> -- dereference
+  // with -> to call through it, same as any other pointer.
+  EXPECT_EQ(2, facility->strt_up_policy->n_trackers());
+
+  // Nothing pushed into either tracked buffer yet -- not full.
+  EXPECT_FALSE(facility->strt_up_policy->full());
+
+  // Fill tritium_storage to exactly its threshold; blanket_feed is still
+  // empty, so the policy as a whole should still report not-full.
+  double tritium_threshold =
+      (facility->reserve_inventory + facility->sequestered_equilibrium) *
+      facility->tritium_startup_fraction;
+  Material::Ptr trit = Material::CreateUntracked(tritium_threshold, tritium());
+  facility->tritium_storage.Push(trit);
+
+  EXPECT_TRUE(facility->strt_up_policy->full("tritium_storage"));
+  EXPECT_FALSE(facility->strt_up_policy->full("blanket_feed"));
+  EXPECT_FALSE(facility->strt_up_policy->full());
+
+  // Now fill blanket_feed to its threshold too -- policy should flip to
+  // full.
+  double blanket_threshold =
+      facility->blanket_size * facility->blanket_turnover_fraction;
+  Material::Ptr blanket_mat =
+      Material::CreateUntracked(blanket_threshold, enriched_lithium());
+  facility->blanket_feed.Push(blanket_mat);
+
+  EXPECT_TRUE(facility->strt_up_policy->full());
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+TEST_F(FusionPowerPlantTest, StartupBlockedByUndersizedBlanket) {
+  std::string config = common_config +
+                       " <TBR>1.00</TBR> "
+                       " <fuel_incommod>Tritium</fuel_incommod>"
+                       " <blanket_turnover_fraction>0.05</blanket_turnover_fraction>";
+
+  int simdur = 3;
+  cyclus::MockSim sim(cyclus::AgentSpec(":tricycle:FusionPowerPlant"), config,
+                      simdur);
+
+  sim.AddRecipe("tritium", tritium());
+  sim.AddRecipe("enriched_lithium", enriched_lithium());
+  sim.AddSource("Tritium").recipe("tritium").Finalize();
+
+  // blanket_turnover threshold here is blanket_size * blanket_turnover_
+  // fraction = 1000 * 0.05 = 50. Capping the source well below that means
+  // blanket_feed can never satisfy its strt_up_policy tracker.
+  sim.AddSource("Enriched_Lithium")
+      .capacity(1.0)
+      .recipe("enriched_lithium")
+      .Finalize();
+
+  int id = sim.Run();
+
+  QueryResult qr = TimeInventoryQuery(sim, std::to_string(simdur - 1));
+  double seq_trit = qr.GetVal<double>("TritiumSequestered");
+
+  EXPECT_EQ(0, seq_trit);
+}
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Do Not Touch! Below section required for connection with Cyclus
 cyclus::Agent* FusionPowerPlantConstructor(cyclus::Context* ctx) {
