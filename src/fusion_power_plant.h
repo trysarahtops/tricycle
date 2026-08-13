@@ -4,6 +4,7 @@
 #include <string>
 #include "cyclus.h"
 #include "boost/shared_ptr.hpp"
+#include "gtest/gtest_prod.h"
 #include "pyne.h"
 using cyclus::Material;
 
