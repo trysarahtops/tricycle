@@ -253,7 +253,7 @@ void FusionPowerPlant::BreedTritium(double T_burned) {
   Material::Ptr Li6_burned = Material::CreateUntracked(
       T_created_atoms * (1 - Li7_contribution) / Li6_molar_mass, Li6);
   Material::Ptr He4_generated =
-      Material::CreateUntracked(T_created_atoms / He4_molar_mass, He4);
+      Material::Create(this, T_created_atoms / He4_molar_mass, He4);
 
   Material::Ptr consumed_Li = blanket->ExtractComp(Li7_burned->quantity(), Li7);
   consumed_Li->Absorb(blanket->ExtractComp(Li6_burned->quantity(), Li6));
