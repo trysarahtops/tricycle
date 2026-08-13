@@ -341,7 +341,7 @@ TEST_F(FusionPowerPlantTest, EnterNotifyScheduleFill) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill2) {
+TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill) {
   // Test catch for invalid fill behavior keyword in EnterNotify.
 
   std::string config = common_config +
@@ -385,22 +385,6 @@ TEST_F(FusionPowerPlantTest, EnterNotifySellPolicy) {
   double qr_rows = qr.rows.size();
 
   EXPECT_EQ(simdur, qr_rows);
-}
-
-TEST_F(FusionPowerPlantTest, EnterNotifyInvalidFill) {
-  // Test catch for invalid fill behavior keyword in EnterNotify.
-
-  std::string config = common_config +
-                       " <TBR>1.00</TBR> "
-                       " <fuel_incommod>Tritium</fuel_incommod>"
-                       " <buy_quantity>0.1</buy_quantity>"
-                       " <buy_frequency>1</buy_frequency>"
-                       " <refuel_mode>kjnsfdhn</refuel_mode>";
-
-  int simdur = 2;
-  cyclus::MockSim sim = InitializeSim(config, simdur);
-
-  EXPECT_THROW(int id = sim.Run(), cyclus::KeyError);
 }
 
 TEST_F(FusionPowerPlantTest, StartupPolicyRegistration) {

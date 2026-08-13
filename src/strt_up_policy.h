@@ -53,8 +53,8 @@ namespace tricycle {
 ///   }
 class StartupPolicy {
  public:
-  StartupPolicy();
-  ~StartupPolicy();
+  StartupPolicy() = default;
+  ~StartupPolicy() = default;
 
   /// Registers a resource buffer to be tracked by this policy. `name` is
   /// an arbitrary label used only for lookup/Unregister (e.g. a commodity
@@ -86,17 +86,17 @@ class StartupPolicy {
 
   /// Number of trackers currently registered.
   int n_trackers() const;
+  void UpdateThreshold(const std::string& name, double new_threshold);
 
  private:
    struct Tracker {
-    Tracker(std::string name_, ResBuf<Material>* buf_, double threshold_)
-        : name(name_), buf(buf_), threshold(threshold_) {}
-    std::string name;
+    Tracker(ResBuf<Material>* buf_, double threshold_)
+        : buf(buf_), threshold(threshold_) {}
     ResBuf<Material>* buf;
     double threshold;
   };
 
-  std::vector<Tracker> trackers_;
+  std::map<std::string,Tracker> trackers_;
 };
 
 }  // namespace tricycle

@@ -2,17 +2,13 @@
 #define CYCLUS_TRICYCLE_FUSION_POWER_PLANT_H_
 
 #include <string>
-
 #include "cyclus.h"
-#include "strt_up_policy.h"
 #include "boost/shared_ptr.hpp"
 #include "pyne.h"
-/// #include "strt_up_policy_snippet.cycpp.h"
-
 using cyclus::Material;
 
-namespace tricycle {
-
+namespace tricycle { 
+class StartupPolicy;
 /// @class FusionPowerPlant
 /// The FusionPowerPlant class inherits from the Facility class and is
 /// dynamically loaded by the Agent class when requested.
@@ -37,6 +33,7 @@ namespace tricycle {
 ///
 /// This section needs to be filled out once there is some behavior to describe.
 ///
+
 class FusionPowerPlant : public cyclus::Facility  {
   friend class FusionPowerPlantTest;
  public:
@@ -273,7 +270,7 @@ class FusionPowerPlant : public cyclus::Facility  {
 
   cyclus::toolkit::TotalInvTracker fuel_tracker;
   cyclus::toolkit::TotalInvTracker blanket_tracker;
-  tricycle::StartupPolicy strt_up_policy;
+  std::unique_ptr<StartupPolicy> strt_up_policy;
 
   //This is to correctly instantiate the TotalInvTracker(s)
   double fuel_limit = 1000.0;
