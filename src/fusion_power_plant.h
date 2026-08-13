@@ -272,7 +272,6 @@ class FusionPowerPlant : public cyclus::Facility  {
 
   cyclus::toolkit::TotalInvTracker fuel_tracker;
   cyclus::toolkit::TotalInvTracker blanket_tracker;
-  std::unique_ptr<StartupPolicy> strt_up_policy;
 
   //This is to correctly instantiate the TotalInvTracker(s)
   double fuel_limit = 1000.0;
